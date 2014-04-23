@@ -1,5 +1,5 @@
 # Project specific stuff
-config.yaml # Don't accidentally check in secrets!
+config.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

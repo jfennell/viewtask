@@ -1,12 +1,12 @@
 import json
 import hashlib
 import pprint
+import random
 import requests
 import sys
 import yaml
 
 ENDPOINT = 'https://api.rememberthemilk.com/services/rest/'
-temp_frob = '91cf2ab2b0ff534a54c935225a8d5a0a6de826b1'
 
 # TODO: namedtuple...
 def load_config(path='config.yaml'):
@@ -37,7 +37,7 @@ def get_frob(api_key, shared_secret):
         raise ValueError('Got an invalid response from frob:\n{response}'.format(response=r.text))
     return response['frob']
 
-def auth(api_key, shared_secret):
+def show_authorize_url(api_key, shared_secret):
     """Construct an auth url for a user.
 
     https://www.rememberthemilk.com/services/api/authentication.rtm
@@ -54,10 +54,10 @@ def auth(api_key, shared_secret):
     r = requests.get(endpoint, params=params)
     print frob, r.url
 
-def get_auth_token(api_key, shared_secret):
+def get_auth_token(api_key, shared_secret, frob):
     params = {
         'api_key': api_key,
-        'frob': temp_frob,
+        'frob': frob,
         'method': 'rtm.auth.getToken',
         'format': 'json',
     }
@@ -78,34 +78,51 @@ def main(args=None):
     api_key = conf['api_key']
     shared_secret = conf['shared_secret']
 
-#    r = requests.get(ENDPOINT, params={
-#        'method': 'rtm.test.echo',
-#        'api_key': api_key,
+    if args:
+        if args[0] == 'frob':
+            show_authorize_url(api_key, shared_secret)
+        elif args[0] == 'token':
+            token = get_auth_token(api_key, shared_secret, conf['frob'])
+            print 'Token: "{token}"'.format(token=token)
+        return
+
+    # Now assume frob & token are in conf and valid
+
+#    params = {
+#        'method': 'rtm.lists.getList',
 #        'format': 'json',
-#        'foo': 'bar',
-#        }
-#    )
-
-#    print r.url
-#    print r.text
-#    pprint.pprint(json.loads(r.text))
-
-#    auth(api_key, shared_secret)
-#    return
-
-    token = get_auth_token(api_key, shared_secret)
-
+#        'api_key': api_key,
+#        'auth_token': conf['token']
+#    }
     params = {
-        'method': 'rtm.lists.getList',
+        'method': 'rtm.tasks.getList',
+        'filter': '(list:work due:today)',
         'format': 'json',
         'api_key': api_key,
-        'auth_token': token
+        'auth_token': conf['token'],
     }
     api_sig = calculate_secret(shared_secret, params)
     params['api_sig'] = api_sig
 
     r = requests.get(ENDPOINT, params=params)
-    pprint.pprint(json.loads(r.text))
+    response = json.loads(r.text)
+#    pprint.pprint(response)
+
+    # XXX: This will crash if there is an error
+    list_items = response.get('rsp', {}).get('tasks', {}).get('list', [])[0].get('taskseries', {})
+#    pprint.pprint(list_items)
+    task = random.choice(list_items)
+    pprint.pprint(task)
+    present_task(task)
+
+def present_task(task):
+    description = task.get('name', '')
+    priority = task.get('task', {}).get('priority', 'N')
+    priority = int(priority if priority != 'N' else 4)
+
+    print '!{priority}: {description}'.format(
+        priority=priority,
+        description=description)
 
 
 def calculate_secret(shared_secret, params_dict):
