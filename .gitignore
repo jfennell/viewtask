@@ -1,3 +1,6 @@
+# Project specific stuff
+config.yaml # Don't accidentally check in secrets!
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -15,6 +18,7 @@ dist/
 eggs/
 lib/
 lib64/
+include/
 parts/
 sdist/
 var/
@@ -52,3 +56,4 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+*.swp
