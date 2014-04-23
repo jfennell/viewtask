@@ -8,6 +8,43 @@ import yaml
 
 ENDPOINT = 'https://api.rememberthemilk.com/services/rest/'
 
+class RememberAPI(object):
+    def __init__(self, api_key, shared_secret, token=None, endpoint=ENDPOINT, response_format='json'):
+        self.api_key = api_key
+        self.shared_secret = shared_secret
+        self.token = token
+        self.endpoint = endpoint
+        self.response_format = response_format
+
+    def request(self, method, **kwargs):
+        params = {
+            'method': method,
+            'api_key': self.api_key,
+            'format': self.response_format,
+        }
+        if self.token:
+            params['token'] = token
+        params.update(kwargs)
+        api_sig = self._signature(params)
+        params['api_sig'] = api_sig
+
+        r = requests.get(self.endpoint, params=params)
+        response = json.loads(r.text)
+
+    def _signature(self, params_dict):
+        """Calculate the api signature from the parameters to a request"""
+        # Sort params in alphabetical order,
+        # concatenate k,v pairs
+        # concatenate all of those concatenated pairs
+        # then prepend the secret and md5 hash it
+        sorted_concatendated_params = ''.join(
+            sorted(
+                "{k}{v}".format(k=k, v=v)
+                for k, v in params_dict.iteritems()
+            )
+        )
+        return hashlib.md5(shared_secret+sorted_concatendated_params).hexdigest()
+
 # TODO: namedtuple...
 def load_config(path='config.yaml'):
     with open(path, 'r') as f:
